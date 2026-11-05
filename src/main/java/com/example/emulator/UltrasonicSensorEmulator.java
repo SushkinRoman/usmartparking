@@ -35,7 +35,6 @@ public class UltrasonicSensorEmulator implements Runnable {
         // Поток 2: Эмуляция логики A-03 (СВОБОДНО -> ЗАБРОНИРОВАНО -> ЗАНЯТО)
         Thread threadA03 = new Thread(() -> {
             // Мы отправляем фиктивные данные, а сервер сам меняет статус через simulateA03Cycle
-            // Но чтобы триггернуть сервер, будем слать запросы, а сервер их перехватит или мы вызовем метод напрямую.
             // Для простоты в рамках эмулятора, мы просто шлем данные, а в Main добавим вызов simulateA03Cycle
             while(true) {
                 try { Thread.sleep(5000); } catch (Exception e) {}
