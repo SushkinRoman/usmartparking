@@ -1,0 +1,9 @@
+com\example\emulator\UltrasonicSensorEmulator.class
+com\example\model\SensorData.class
+com\example\service\SignalProcessingService.class
+com\example\Main.class
+com\example\server\ParkingServer$SpotsHandler.class
+com\example\server\ParkingServer.class
+com\example\model\ParkingSpot.class
+com\example\server\ParkingServer$SensorHandler.class
+com\example\server\ParkingServer$WebPageHandler.class

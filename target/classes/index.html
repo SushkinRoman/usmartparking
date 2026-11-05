@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Умная парковка - Мониторинг</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; background: #f4f4f9; }
+        h1 { color: #333; }
+        .parking-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 60px);
+            gap: 10px;
+            justify-content: center;
+            margin: 20px auto;
+            max-width: 500px;
+        }
+        .spot {
+            width: 60px; height: 80px;
+            border-radius: 8px;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            font-weight: bold; color: white;
+            transition: background 0.3s;
+        }
+        .FREE { background-color: #2ecc71; }      /* Зеленый */
+        .OCCUPIED { background-color: #e74c3c; }  /* Красный */
+        .RESERVED { background-color: #f1c40f; color: #333; } /* Желтый */
+
+        .entry-zone {
+            grid-column: 1 / -1;
+            background: #34495e; color: white;
+            padding: 10px; margin-top: 20px; border-radius: 8px;
+        }
+        .log-panel {
+            text-align: left; max-width: 500px; margin: 20px auto;
+            background: #fff; padding: 15px; border-radius: 8px;
+            height: 150px; overflow-y: auto; font-family: monospace; font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+<h1>🅿️ Умная парковка (Демо Лабы 2)</h1>
+
+<div class="parking-grid" id="grid"></div>
+
+<div class="entry-zone">🚗 Въезд / Выезд (Индукционная петля)</div>
+
+<div class="log-panel" id="log">Ожидание данных от датчиков...</div>
+
+<script>
+    async function updateGrid() {
+        try {
+            const response = await fetch('http://localhost:8080/api/spots');
+            const spots = await response.json();
+            const grid = document.getElementById('grid');
+            grid.innerHTML = '';
+
+
+            spots.sort((a, b) => a.spotId.localeCompare(b.spotId));
+
+            spots.forEach(spot => {
+                const div = document.createElement('div');
+                div.className = `spot ${spot.status}`;
+                div.innerHTML = `<div>${spot.spotId}</div><div style="font-size:10px">${spot.status}</div>`;
+                grid.appendChild(div);
+            });
+
+            // Логирование изменений для места A-01 (которое эмулируется)
+            const a01 = spots.find(s => s.spotId === 'A-01');
+            if (a01) {
+                document.getElementById('log').innerHTML =
+                    `[${new Date().toLocaleTimeString()}] Датчик A-01: Дистанция=${a01.lastFilteredDistance.toFixed(1)}см, Статус=${a01.status}<br>` +
+                    document.getElementById('log').innerHTML;
+            }
+        } catch (e) {
+            console.error("Ошибка получения данных", e);
+        }
+    }
+
+    // Обновление каждые 1.5 секунды
+    setInterval(updateGrid, 1500);
+    updateGrid();
+</script>
+</body>
+</html>
