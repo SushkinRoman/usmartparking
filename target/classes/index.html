@@ -39,11 +39,11 @@
     </style>
 </head>
 <body>
-<h1>🅿️ Умная парковка (Демо Лабы 2)</h1>
+<h1>🅿️ Умная парковка </h1>
 
 <div class="parking-grid" id="grid"></div>
 
-<div class="entry-zone">🚗 Въезд / Выезд (Индукционная петля)</div>
+<div class="entry-zone"> Въезд / Выезд (Индукционная петля)</div>
 
 <div class="log-panel" id="log">Ожидание данных от датчиков...</div>
 
@@ -65,7 +65,7 @@
                 grid.appendChild(div);
             });
 
-            // Логирование изменений для места A-01 (которое эмулируется)
+            // Логирование изменений для места A-01
             const a01 = spots.find(s => s.spotId === 'A-01');
             if (a01) {
                 document.getElementById('log').innerHTML =
