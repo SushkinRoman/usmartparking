@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Статистика парковки</title>
+    <link rel="stylesheet" href="css/style.css">
+    <!-- Подключаем Chart.js для графика -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+<div class="container">
+    <h2>Статистика загруженности</h2>
+    <div class="nav">
+        <a href="map.html">Карта</a> | <a href="login.html">Выйти</a>
+    </div>
+
+    <div class="stats-box">
+        <div class="stat-item" style="background: #28a745;">
+            <h3 id="freeCount">0</h3>
+            <p>СВОБОДНО</p>
+        </div>
+        <div class="stat-item" style="background: #dc3545;">
+            <h3 id="occupiedCount">0</h3>
+            <p>ЗАНЯТО</p>
+        </div>
+        <div class="stat-item" style="background: #ffc107; color: #333;">
+            <h3 id="reservedCount">0</h3>
+            <p>ЗАБРОНИРОВАНО</p>
+        </div>
+    </div>
+
+    <h3>Динамика изменения загруженности парковки</h3>
+    <canvas id="occupancyChart" width="400" height="150"></canvas>
+</div>
+<script src="js/app.js"></script>
+</body>
+</html>

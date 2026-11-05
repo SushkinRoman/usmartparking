@@ -1,61 +1,90 @@
 package com.example.service;
 
-import com.example.model.ParkingSpot;
+import com.example.model.ParkingSnapshot;
 import com.example.model.SensorData;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
+import org.springframework.stereotype.Service;
+import jakarta.annotation.PostConstruct;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
+@Service
 public class SignalProcessingService {
-    private final Map<String, ParkingSpot> buffer = new ConcurrentHashMap<>();
-    private final double ALPHA = 0.333;
 
-    // История для графика (последние 20 замеров)
-    private final Queue<Integer> occupancyHistory = new LinkedList<>();
+    // Буфер текущего состояния всех мест
+    private final Map<String, SensorData> buffer = new HashMap<>();
 
-    public SignalProcessingService() {
+    // История для графика загруженности
+    private final List<ParkingSnapshot> history = new ArrayList<>();
+    private static final int MAX_HISTORY_SIZE = 25; // Храним последние 25 снимков
+
+    private final double ALPHA = 2.0 / (1 + 5); // N=5 для EMA
+
+    @PostConstruct
+    public void initGrid() {
         char[] rows = {'A', 'B', 'C', 'D', 'E', 'F'};
         for (char row : rows) {
-            for (int i = 1; i <= 6; i++) {
-                String id = row + "-" + String.format("%02d", i);
-                buffer.put(id, new ParkingSpot(id));
+            for (int col = 1; col <= 6; col++) {
+                String id = row + "-" + String.format("%02d", col);
+                buffer.put(id, new SensorData(id, 50.0, 50.0, "СВОБОДНО"));
             }
         }
+        recordHistory(); // Записываем начальное состояние
     }
 
-    public synchronized SensorData processSignal(String spotId, double rawDistance) {
-        ParkingSpot spot = buffer.get(spotId);
-        if (spot == null) return null;
+    public synchronized SensorData processSignal(String spaceId, double rawValue) {
+        SensorData prev = buffer.getOrDefault(spaceId, new SensorData(spaceId, 50.0, 50.0, "СВОБОДНО"));
 
-        double ema = (rawDistance * ALPHA) + (spot.getLastFilteredDistance() * (1 - ALPHA));
-        spot.update(ema);
+        // Фильтрация EMA
+        double ema = (rawValue * ALPHA) + (prev.getFilteredValue() * (1 - ALPHA));
 
-        updateChartHistory();
-        return new SensorData(spotId, rawDistance, ema, spot.getStatus());
+        // Логика определения статуса
+        String newStatus = "СВОБОДНО";
+        if ("ЗАБРОНИРОВАНО".equals(prev.getStatus())) {
+            newStatus = "ЗАБРОНИРОВАНО";
+        } else if (ema < 40.0) {
+            newStatus = "ЗАНЯТО";
+        }
+
+        SensorData newData = new SensorData(spaceId, rawValue, ema, newStatus);
+        buffer.put(spaceId, newData);
+
+        // Обновляем историю для графика при каждом изменении данных
+        recordHistory();
+
+        return newData;
     }
 
-    // Метод для эмуляции смены статусов A-03 (СВОБОДНО -> ЗАБРОНИРОВАНО -> ЗАНЯТО)
-    public void simulateA03Cycle() {
-        ParkingSpot spot = buffer.get("A-03");
-        if (spot != null) {
-            if ("СВОБОДНО".equals(spot.getStatus())) {
-                spot.setStatus("ЗАБРОНИРОВАНО");
-            } else if ("ЗАБРОНИРОВАНО".equals(spot.getStatus())) {
-                spot.setStatus("ЗАНЯТО");
-            } else {
-                spot.setStatus("СВОБОДНО");
-                spot.update(150.0); // Сброс дистанции
-            }
+    // Метод для ручного изменения статуса (например, для эмулятора A-03)
+    public synchronized void setManualStatus(String spaceId, String status) {
+        SensorData data = buffer.get(spaceId);
+        if (data != null) {
+            data.setStatus(status);
+            buffer.put(spaceId, data);
+            recordHistory(); // Также обновляем график
         }
     }
 
-    private void updateChartHistory() {
-        long occupiedCount = buffer.values().stream().filter(s -> "ЗАНЯТО".equals(s.getStatus())).count();
-        occupancyHistory.add((int) occupiedCount);
-        if (occupancyHistory.size() > 20) {
-            occupancyHistory.poll();
+    private void recordHistory() {
+        int free = 0, occupied = 0, reserved = 0;
+        for (SensorData data : buffer.values()) {
+            if ("СВОБОДНО".equals(data.getStatus())) free++;
+            else if ("ЗАНЯТО".equals(data.getStatus())) occupied++;
+            else if ("ЗАБРОНИРОВАНО".equals(data.getStatus())) reserved++;
+        }
+
+        String time = LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss"));
+        history.add(new ParkingSnapshot(time, free, occupied, reserved));
+
+        // Ограничиваем размер истории, чтобы график был читаемым
+        if (history.size() > MAX_HISTORY_SIZE) {
+            history.remove(0);
         }
     }
 
-    public Map<String, ParkingSpot> getBuffer() { return buffer; }
-    public Queue<Integer> getOccupancyHistory() { return occupancyHistory; }
+    public Map<String, SensorData> getBuffer() { return buffer; }
+    public List<ParkingSnapshot> getHistory() { return history; }
 }
