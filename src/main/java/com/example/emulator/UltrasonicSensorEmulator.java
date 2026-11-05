@@ -17,50 +17,48 @@ public class UltrasonicSensorEmulator implements Runnable {
 
     @Override
     public void run() {
-        String spotId = "A-01"; // Эмулируем датчик на месте A-01
-        boolean isCarPresent = false;
-
-        System.out.println("[ЭМУЛЯТОР] Запуск эмуляции ультразвукового датчика HC-SR04 для места " + spotId);
-
-        while (true) {
-            try {
-                // Имитация изменения ситуации: машина заезжает или уезжает
-                if (random.nextDouble() < 0.1) { // 10% шанс изменения состояния
-                    isCarPresent = !isCarPresent;
-                }
-
-                // Генерация сырого сигнала (в см)
-                // Если машина есть: ~30 см + шум. Если нет: ~150 см + шум.
-                double baseDistance = isCarPresent ? 30.0 : 150.0;
-                double noise = random.nextGaussian() * 5.0; // Гауссовский шум датчика
-                double rawDistance = Math.max(2.0, baseDistance + noise); // Мин. расстояние 2 см
-
-                // Создаем JSON через Map
-                Map<String, Object> payload = new HashMap<>();
-                payload.put("spot", spotId);
-                payload.put("distance", rawDistance);
-
-                String jsonPayload = gson.toJson(payload);
-
-
-                // Отправка на сервер
-                HttpRequest request = HttpRequest.newBuilder()
-                        .uri(URI.create(serverUrl))
-                        .header("Content-Type", "application/json")
-                        .POST(HttpRequest.BodyPublishers.ofString(jsonPayload))
-                        .build();
-
-                client.send(request, HttpResponse.BodyHandlers.discarding());
-
-                System.out.printf("[ЭМУЛЯТОР] Место: %s, Сырой сигнал: %.2f см, Машина: %b%n",
-                        spotId, rawDistance, isCarPresent);
-
-                // Дискретизация: опрос каждые 2 секунды
-                Thread.sleep(2000);
-
-            } catch (Exception e) {
-                System.err.println("[ЭМУЛЯТОР] Ошибка: " + e.getMessage());
+        // Поток 1: Эмуляция датчика A-01 (расстояние)
+        Thread threadA01 = new Thread(() -> {
+            String spotId = "A-01";
+            boolean isCarPresent = false;
+            while (true) {
+                try {
+                    if (random.nextDouble() < 0.1) isCarPresent = !isCarPresent;
+                    double baseDistance = isCarPresent ? 30.0 : 150.0;
+                    double rawDistance = Math.max(2.0, baseDistance + random.nextGaussian() * 5.0);
+                    sendRequest(spotId, rawDistance);
+                    Thread.sleep(2000);
+                } catch (Exception e) { e.printStackTrace(); }
             }
+        });
+
+        // Поток 2: Эмуляция логики A-03 (СВОБОДНО -> ЗАБРОНИРОВАНО -> ЗАНЯТО)
+        Thread threadA03 = new Thread(() -> {
+            // Мы отправляем фиктивные данные, а сервер сам меняет статус через simulateA03Cycle
+            // Но чтобы триггернуть сервер, будем слать запросы, а сервер их перехватит или мы вызовем метод напрямую.
+            // Для простоты в рамках эмулятора, мы просто шлем данные, а в Main добавим вызов simulateA03Cycle
+            while(true) {
+                try { Thread.sleep(5000); } catch (Exception e) {}
+            }
+        });
+
+        threadA01.start();
+    }
+
+    private void sendRequest(String spotId, double rawDistance) {
+        try {
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("spot", spotId);
+            payload.put("distance", rawDistance);
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(serverUrl))
+                    .header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(gson.toJson(payload)))
+                    .build();
+            client.send(request, HttpResponse.BodyHandlers.discarding());
+            System.out.printf("[ЭМУЛЯТОР] Место: %s, Дистанция: %.2f см%n", spotId, rawDistance);
+        } catch (Exception e) {
+            System.err.println("[ЭМУЛЯТОР] Ошибка: " + e.getMessage());
         }
     }
 }

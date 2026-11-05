@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Карта парковки - Умная парковка</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f4f4f9; margin: 0; padding: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; background: #34495e; color: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+        .nav-link { color: #3498db; text-decoration: none; font-weight: bold; margin-right: 20px; }
+        .nav-link:hover { text-decoration: underline; }
+        .logout-btn { background: #e74c3c; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; }
+
+        /* УВЕЛИЧЕННЫЙ РАЗМЕР МЕСТ */
+        .parking-grid { display: grid; grid-template-columns: repeat(6, 100px); gap: 15px; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); justify-content: center; }
+        .spot { width: 100px; height: 120px; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: bold; color: white; font-size: 16px; transition: transform 0.2s; }
+        .spot:hover { transform: scale(1.05); }
+        .СВОБОДНО { background-color: #2ecc71; }
+        .ЗАНЯТО { background-color: #e74c3c; }
+        .ЗАБРОНИРОВАНО { background-color: #f1c40f; color: #333; }
+
+        .entry-zone { grid-column: 1 / -1; background: #34495e; color: white; padding: 15px; text-align: center; border-radius: 4px; margin-top: 20px; font-size: 18px; }
+    </style>
+    <script>
+        if (!localStorage.getItem('user')) { window.location.href = '/login.html'; }
+        function logout() { localStorage.removeItem('user'); window.location.href = '/login.html'; }
+    </script>
+</head>
+<body>
+<div class="header">
+    <h2>🅿️ Умная парковка: Карта</h2>
+    <div>
+        <a href="/stats.html" class="nav-link"> Перейти к статистике</a>
+        <span id="user-display" style="margin-right: 15px;"></span>
+        <button class="logout-btn" onclick="logout()">Выйти</button>
+    </div>
+</div>
+
+<div style="display: flex; justify-content: center;">
+    <div>
+        <h3 style="text-align: center;">Схема парковки</h3>
+        <div class="parking-grid" id="grid"></div>
+        <div class="entry-zone"> Въезд / Выезд (Индукционная петля)</div>
+    </div>
+</div>
+
+<script>
+    document.getElementById('user-display').innerText = 'Пользователь: ' + localStorage.getItem('user');
+
+    async function updateMap() {
+        try {
+            const spotsRes = await fetch('/api/spots'); // Относительный путь
+            const spots = await spotsRes.json();
+            const grid = document.getElementById('grid');
+            grid.innerHTML = '';
+
+            spots.sort((a, b) => a.spotId.localeCompare(b.spotId));
+            spots.forEach(spot => {
+                const div = document.createElement('div');
+                div.className = `spot ${spot.status}`;
+                div.innerHTML = `<div>${spot.spotId}</div><div style="font-size: 14px; margin-top: 5px;">${spot.status}</div>`;
+                grid.appendChild(div);
+            });
+        } catch (e) { console.error("Ошибка получения данных", e); }
+    }
+
+    setInterval(updateMap, 1500);
+    updateMap();
+</script>
+</body>
+</html>

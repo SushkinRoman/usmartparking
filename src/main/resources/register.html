@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Регистрация - Умная парковка</title>
+    <style>
+        body { font-family: Arial, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background: #f4f4f9; }
+        .form-container { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 300px; text-align: center; }
+        input { width: 90%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 4px; }
+        button { width: 100%; padding: 10px; background: #2ecc71; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #27ae60; }
+        .link { margin-top: 15px; font-size: 14px; }
+        .link a { color: #3498db; text-decoration: none; }
+    </style>
+</head>
+<body>
+<div class="form-container">
+    <h2>Регистрация</h2>
+    <input type="text" id="username" placeholder="Логин">
+    <input type="password" id="password" placeholder="Пароль">
+    <button onclick="register()">Зарегистрироваться</button>
+    <p id="message" style="color: red; font-size: 12px;"></p>
+    <div class="link">Уже есть аккаунт? <a href="/login.html">Войти</a></div>
+</div>
+
+<script>
+    async function register() {
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+
+        const response = await fetch('/api/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
+        });
+        const data = await response.json();
+
+        if (data.success) {
+            alert("Регистрация успешна! Теперь вы можете войти.");
+            window.location.href = '/login.html';
+        } else {
+            document.getElementById('message').innerText = data.message;
+        }
+    }
+</script>
+</body>
+</html>

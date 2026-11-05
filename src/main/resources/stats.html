@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Статистика - Умная парковка</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f4f4f9; margin: 0; padding: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; background: #34495e; color: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+        .nav-link { color: #3498db; text-decoration: none; font-weight: bold; margin-right: 20px; }
+        .nav-link:hover { text-decoration: underline; }
+        .logout-btn { background: #e74c3c; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; }
+
+        .container { display: flex; gap: 30px; flex-wrap: wrap; justify-content: center; }
+        .chart-container { flex: 2; min-width: 400px; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+
+        /* Стили для таблицы статистики */
+        .stats-container { flex: 1; min-width: 250px; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .stats-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        .stats-table th, .stats-table td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+        .stats-table th { background-color: #f8f9fa; font-weight: bold; }
+        .status-free { color: #2ecc71; font-weight: bold; }
+        .status-occupied { color: #e74c3c; font-weight: bold; }
+        .status-reserved { color: #f39c12; font-weight: bold; }
+    </style>
+    <script>
+        if (!localStorage.getItem('user')) { window.location.href = '/login.html'; }
+        function logout() { localStorage.removeItem('user'); window.location.href = '/login.html'; }
+    </script>
+</head>
+<body>
+<div class="header">
+    <h2> Умная парковка: Статистика</h2>
+    <div>
+        <a href="/map.html" class="nav-link"> Перейти к карте</a>
+        <span id="user-display" style="margin-right: 15px;"></span>
+        <button class="logout-btn" onclick="logout()">Выйти</button>
+    </div>
+</div>
+
+<div class="container">
+    <!-- Таблица статистики -->
+    <div class="stats-container">
+        <h3 style="text-align: center; margin-top: 0;">Сводка по местам</h3>
+        <table class="stats-table">
+            <tr>
+                <th>Статус</th>
+                <th>Количество</th>
+            </tr>
+            <tr>
+                <td class="status-free"> Свободно</td>
+                <td id="count-free" style="font-size: 20px; font-weight: bold;">0</td>
+            </tr>
+            <tr>
+                <td class="status-occupied"> Занято</td>
+                <td id="count-occupied" style="font-size: 20px; font-weight: bold;">0</td>
+            </tr>
+            <tr>
+                <td class="status-reserved"> Забронировано</td>
+                <td id="count-reserved" style="font-size: 20px; font-weight: bold;">0</td>
+            </tr>
+            <tr style="background-color: #f8f9fa;">
+                <td><strong>Всего мест</strong></td>
+                <td><strong>36</strong></td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- График -->
+    <div class="chart-container">
+        <h3 style="text-align: center; margin-top: 0;">📈 Динамика загруженности</h3>
+        <canvas id="occupancyChart"></canvas>
+    </div>
+</div>
+
+<script>
+    document.getElementById('user-display').innerText = 'Пользователь: ' + localStorage.getItem('user');
+    let chart;
+
+    async function updateStats() {
+        try {
+            // 1. Получаем данные о местах для таблицы
+            const spotsRes = await fetch('/api/spots');
+            const spots = await spotsRes.json();
+
+            let freeCount = 0, occupiedCount = 0, reservedCount = 0;
+            spots.forEach(spot => {
+                if (spot.status === 'СВОБОДНО') freeCount++;
+                else if (spot.status === 'ЗАНЯТО') occupiedCount++;
+                else if (spot.status === 'ЗАБРОНИРОВАНО') reservedCount++;
+            });
+
+            document.getElementById('count-free').innerText = freeCount;
+            document.getElementById('count-occupied').innerText = occupiedCount;
+            document.getElementById('count-reserved').innerText = reservedCount;
+
+            // 2. Получаем данные для графика
+            const chartRes = await fetch('/api/chart');
+            const history = await chartRes.json();
+
+            if (!chart) {
+                const ctx = document.getElementById('occupancyChart').getContext('2d');
+                chart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: Array(history.length).fill(''),
+                        datasets: [{
+                            label: 'Занятых мест',
+                            data: history,
+                            borderColor: '#3498db',
+                            backgroundColor: 'rgba(52, 152, 219, 0.2)',
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 4,
+                            pointBackgroundColor: '#2980b9'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: { y: { beginAtZero: true, max: 36, title: { display: true, text: 'Количество мест' } } }
+                    }
+                });
+            } else {
+                chart.data.datasets[0].data = history;
+                chart.update();
+            }
+        } catch (e) { console.error("Ошибка получения данных", e); }
+    }
+
+    setInterval(updateStats, 1500);
+    updateStats();
+</script>
+</body>
+</html>
