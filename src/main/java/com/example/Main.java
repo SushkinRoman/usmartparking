@@ -19,7 +19,7 @@ public class Main implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
-        System.out.println("Запуск системы 'Умная парковка' (Лабораторная работа №2)");
+        System.out.println("Запуск системы 'Умная парковка'");
         System.out.println("Сервер запущен. Откройте в браузере: http://localhost:8080/login.html");
 
         // 1. Запуск эмулятора ультразвукового датчика (HC-SR04) для места A-01
